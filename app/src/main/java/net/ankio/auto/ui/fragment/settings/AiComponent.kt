@@ -73,7 +73,8 @@ class AiComponent(
 
     /** 缁熶竴娉ㄥ唽鎵€鏈?UI 浜嬩欢 */
     private fun bindListeners() = with(binding) {
-        // Provider 閫夋嫨锛氭牴鎹悗绔俊鎭～鍏?URL / Model锛屽悓鏃朵繚瀛?provider 鍒版湰鍦?        
+
+
 actAiProvider.setOnItemClickListener { _, _, pos, _ ->
             actAiModel.setText("")
             tilAiToken.error = null
