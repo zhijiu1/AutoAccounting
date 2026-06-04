@@ -73,15 +73,11 @@ class AiComponent(
 
     /** 缁熶竴娉ㄥ唽鎵€鏈?UI 浜嬩欢 */
     private fun bindListeners() = with(binding) {
-
-
-actAiProvider.setOnItemClickListener { _, _, pos, _ ->
+        // Provider 閫夋嫨锛氭牴鎹悗绔俊鎭～鍏?URL / Model锛堜粎鏇存柊UI锛屼笉淇濆瓨锛?        actAiProvider.setOnItemClickListener { _, _, pos, _ ->
             actAiModel.setText("")
             tilAiToken.error = null
             val provider = providerList.getOrNull(pos).orEmpty()
-            if (provider.isNotEmpty()) {
-                PrefManager.apiProvider = provider
-            }
+            if (provider.isNotEmpty()) PrefManager.apiProvider = provider
             launch {
                 loadProvider(provider)
             }
@@ -91,7 +87,7 @@ actAiProvider.setOnItemClickListener { _, _, pos, _ ->
         btnRefreshModels.setOnClickListener { fetchModels() }
 
 
-        // 閫変腑妯″瀷锛氭洿鏂?UI 骞舵寔涔呭寲淇濆瓨
+        // 閫変腑妯″瀷锛氫粎鏇存柊 UI锛屼笉绔嬪嵆淇濆瓨
         actAiModel.setOnItemClickListener { parent, _, pos, _ ->
             val model = parent.adapter.getItem(pos)?.toString().orEmpty()
             if (model.isNotEmpty()) {
@@ -218,11 +214,14 @@ actAiProvider.setOnItemClickListener { _, _, pos, _ ->
                 models = AiAPI.getModels(provider = provider, apiKey = token, apiUri = url)
 
                 // 鎴愬姛鏃舵洿鏂癠I
-                actAiModel.setSimpleItems(models.toTypedArray())
-                tilAiToken.error = null
-
+                if (models.isEmpty()) {
+                    tilAiToken.error = "Failed to load models. Check API Key."
+                } else {
+                    actAiModel.setSimpleItems(models.toTypedArray())
+                    tilAiToken.error = null
+                }
             } catch (e: Exception) {
-                tilAiToken.error = context.getString(R.string.ai_test_failed_message, e.message ?: "Unknown error")
+                tilAiToken.error = "Error: ${e.message}"
             } finally {
                 loading.close()
             }
