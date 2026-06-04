@@ -11,11 +11,12 @@ class MiMoProvider : BaseOpenAIProvider() {
 
     override val apiUri: String = "https://api.xiaomimimo.com"
 
-    override var model: String = "mimo-v2-flash"
+    override var model: String = "mimo-v2.5"
 
     override suspend fun getAvailableModels(): List<String> {
         return listOf(
-            "mimo-v2-flash"  // 当前主要模型
+            "mimo-v2.5",
+            "mimo-v2-flash"
         )
     }
 }
