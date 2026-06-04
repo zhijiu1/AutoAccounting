@@ -59,8 +59,25 @@ class AiComponent(
         }
     }
 
+    /**
+     * Resolve the provider name from UI text, matching against the known provider list
+     * to guard against whitespace/encoding mismatches that would cause the backend
+     * to silently fall back to DeepSeek.
+     */
+    private fun resolveProvider(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return trimmed
+        // Exact match first (most common case)
+        if (providerList.any { it == trimmed }) return trimmed
+        // Case-insensitive fallback
+        providerList.firstOrNull { it.equals(trimmed, ignoreCase = true) }?.let { return it }
+        // Whitespace-insensitive fallback
+        providerList.firstOrNull { it.trim() == trimmed }?.let { return it }
+        return trimmed
+    }
+
     private fun bindListeners() = with(binding) {
-        // FIX 1: Save provider to PrefManager on selection
+        // FIX: Save provider to PrefManager on selection
         actAiProvider.setOnItemClickListener { _, _, pos, _ ->
             actAiModel.setText("")
             tilAiToken.error = null
@@ -75,7 +92,7 @@ class AiComponent(
 
         btnRefreshModels.setOnClickListener { fetchModels() }
 
-        // FIX 2: Use adapter.getItem for correct filtered position, persist model
+        // FIX: Use adapter.getItem for correct filtered position, persist model
         actAiModel.setOnItemClickListener { parent, _, pos, _ ->
             val model = parent.adapter.getItem(pos)?.toString().orEmpty()
             if (model.isNotEmpty()) {
@@ -105,7 +122,7 @@ class AiComponent(
 
     private fun testAiConnection() = with(binding) {
         val token = etAiToken.text?.toString()?.trim().orEmpty()
-        val provider = actAiProvider.text?.toString()?.trim().orEmpty()
+        val provider = resolveProvider(actAiProvider.text?.toString().orEmpty())
         val model = actAiModel.text?.toString()?.trim().orEmpty()
         val apiUri = etAiBaseUrl.text?.toString()?.trim().orEmpty()
 
@@ -161,7 +178,7 @@ class AiComponent(
         }
     }
 
-    // FIX 3: Add error handling for fetchModels
+    // FIX: Add error handling for fetchModels + resolve provider to known list
     private fun fetchModels() = with(binding) {
         val token = etAiToken.text?.toString()?.trim().orEmpty()
         if (token.isBlank()) {
@@ -173,7 +190,7 @@ class AiComponent(
         launch {
             try {
                 loading.show()
-                val provider = actAiProvider.text?.toString()?.trim().orEmpty()
+                val provider = resolveProvider(actAiProvider.text?.toString().orEmpty())
                 val url = etAiBaseUrl.text?.toString()?.trim().orEmpty()
                 models = AiAPI.getModels(provider = provider, apiKey = token, apiUri = url)
 
