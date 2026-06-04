@@ -29,38 +29,32 @@ import net.ankio.auto.ui.theme.DynamicColors
 import net.ankio.auto.utils.PrefManager
 
 /**
- * AI 接入设置组件 - Linus式极简设计
+ * AI 鎺ュ叆璁剧疆缁勪欢 - Linus寮忔瀬绠€璁捐
  *
- * 设计原则：
- * 1. 消除构造函数参数冗余 - 只需要binding，自动推断生命周期
- * 2. 统一协程管理 - 使用BaseComponent的launch方法
- * 3. 完整错误处理 - 所有网络请求都有异常捕获
- * 4. 简化状态管理 - 减少不必要的状态变量
- *
- * 功能概览：
- * 1. 根据用户输入的 Token 动态启用 Provider、Model 下拉列表
- * 2. 支持刷新模型列表、跳转到模型 Key 申请页面
- * 3. 自动生命周期管理，无需手动处理协程清理
+ * 璁捐鍘熷垯锛? * 1. 娑堥櫎鏋勯€犲嚱鏁板弬鏁板啑浣?- 鍙渶瑕乥inding锛岃嚜鍔ㄦ帹鏂敓鍛藉懆鏈? * 2. 缁熶竴鍗忕▼绠＄悊 - 浣跨敤BaseComponent鐨刲aunch鏂规硶
+ * 3. 瀹屾暣閿欒澶勭悊 - 鎵€鏈夌綉缁滆姹傞兘鏈夊紓甯告崟鑾? * 4. 绠€鍖栫姸鎬佺鐞?- 鍑忓皯涓嶅繀瑕佺殑鐘舵€佸彉閲? *
+ * 鍔熻兘姒傝锛? * 1. 鏍规嵁鐢ㄦ埛杈撳叆鐨?Token 鍔ㄦ€佸惎鐢?Provider銆丮odel 涓嬫媺鍒楄〃
+ * 2. 鏀寔鍒锋柊妯″瀷鍒楄〃銆佽烦杞埌妯″瀷 Key 鐢宠椤甸潰
+ * 3. 鑷姩鐢熷懡鍛ㄦ湡绠＄悊锛屾棤闇€鎵嬪姩澶勭悊鍗忕▼娓呯悊
  */
 class AiComponent(
     binding: ComponentAiBinding
 ) : BaseComponent<ComponentAiBinding>(binding) {
 
-    // ------------------------------------ 本地缓存数据 ------------------------------------ //
+    // ------------------------------------ 鏈湴缂撳瓨鏁版嵁 ------------------------------------ //
 
-    /** AI 服务商列表 */
+    /** AI 鏈嶅姟鍟嗗垪琛?*/
     private var providerList: List<String> = emptyList()
     private var createKeyUri = ""
-    /** AI 模型列表 */
+    /** AI 妯″瀷鍒楄〃 */
     private var models: List<String> = emptyList()
 
-    // ------------------------------------ 初始化 ------------------------------------------ //
+    // ------------------------------------ 鍒濆鍖?------------------------------------------ //
 
     override fun onComponentCreate() {
         super.onComponentCreate()
         bindListeners()
-        // Debug 模式下将 Token 输入框设置为明文文本，便于开发调试
-        if (BuildConfig.DEBUG) {
+        // Debug 妯″紡涓嬪皢 Token 杈撳叆妗嗚缃负鏄庢枃鏂囨湰锛屼究浜庡紑鍙戣皟璇?        if (BuildConfig.DEBUG) {
             binding.etAiToken.inputType =
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
         }
@@ -77,45 +71,50 @@ class AiComponent(
         }
     }
 
-    /** 统一注册所有 UI 事件 */
+    /** 缁熶竴娉ㄥ唽鎵€鏈?UI 浜嬩欢 */
     private fun bindListeners() = with(binding) {
-        // Provider 选择：根据后端信息填充 URL / Model（仅更新UI，不保存）
-        actAiProvider.setOnItemClickListener { _, _, pos, _ ->
+        // Provider 閫夋嫨锛氭牴鎹悗绔俊鎭～鍏?URL / Model锛屽悓鏃朵繚瀛?provider 鍒版湰鍦?        actAiProvider.setOnItemClickListener { _, _, pos, _ ->
             actAiModel.setText("")
             tilAiToken.error = null
             val provider = providerList.getOrNull(pos).orEmpty()
+            if (provider.isNotEmpty()) {
+                PrefManager.apiProvider = provider
+            }
             launch {
                 loadProvider(provider)
             }
         }
 
-        // 刷新模型列表
+        // 鍒锋柊妯″瀷鍒楄〃
         btnRefreshModels.setOnClickListener { fetchModels() }
 
 
-        // 选中模型：仅更新 UI，不立即保存
-        actAiModel.setOnItemClickListener { _, _, pos, _ ->
-            val model = models.getOrNull(pos).orEmpty()
-            if (model.isNotEmpty()) actAiModel.setText(model, false)
+        // 閫変腑妯″瀷锛氭洿鏂?UI 骞舵寔涔呭寲淇濆瓨
+        actAiModel.setOnItemClickListener { parent, _, pos, _ ->
+            val model = parent.adapter.getItem(pos)?.toString().orEmpty()
+            if (model.isNotEmpty()) {
+                actAiModel.setText(model, false)
+                PrefManager.apiModel = model
+            }
         }
 
-        // 跳转浏览器或复制模型申请地址
+        // 璺宠浆娴忚鍣ㄦ垨澶嶅埗妯″瀷鐢宠鍦板潃
         btnGetToken.setOnClickListener {
             CustomTabsHelper.launchUrlOrCopy(createKeyUri)
         }
 
-        // AI 测试功能
+        // AI 娴嬭瘯鍔熻兘
         btnTestAi.setOnClickListener { testAiConnection() }
 
 
     }
 
-    // ------------------------------------ UI 状态管理 ------------------------------------ //
+    // ------------------------------------ UI 鐘舵€佺鐞?------------------------------------ //
 
-    // 移除了updateTestButtonState方法 - 测试按钮始终可用
+    // 绉婚櫎浜唘pdateTestButtonState鏂规硶 - 娴嬭瘯鎸夐挳濮嬬粓鍙敤
 
     /**
-     * 显示测试结果
+     * 鏄剧ず娴嬭瘯缁撴灉
      */
     private fun showTestResult(isSuccess: Boolean, message: String, icon: Int) = with(binding) {
         cardTestResult.visibility = View.VISIBLE
@@ -129,19 +128,13 @@ class AiComponent(
         tvTestResultContent.text = message
     }
 
-    // ------------------------------------ 网络交互 ---------------------------------------- //
+    // ------------------------------------ 缃戠粶浜や簰 ---------------------------------------- //
 
     /**
-     * 测试 AI 连接 - Linus式简洁测试
-     *
-     * 设计原则：
-     * 1. 简单测试 - 发送"Hello"验证连通性
-     * 2. 清晰反馈 - 成功/失败状态明确
-     * 3. 不影响配置 - 测试不修改任何设置
-     * 4. 异常安全 - 所有错误都有处理
-     */
+     * 娴嬭瘯 AI 杩炴帴 - Linus寮忕畝娲佹祴璇?     *
+     * 璁捐鍘熷垯锛?     * 1. 绠€鍗曟祴璇?- 鍙戦€?Hello"楠岃瘉杩為€氭€?     * 2. 娓呮櫚鍙嶉 - 鎴愬姛/澶辫触鐘舵€佹槑纭?     * 3. 涓嶅奖鍝嶉厤缃?- 娴嬭瘯涓嶄慨鏀逛换浣曡缃?     * 4. 寮傚父瀹夊叏 - 鎵€鏈夐敊璇兘鏈夊鐞?     */
     private fun testAiConnection() = with(binding) {
-        // 参数验证
+        // 鍙傛暟楠岃瘉
         val token = etAiToken.text?.toString()?.trim().orEmpty()
         val provider = actAiProvider.text?.toString()?.trim().orEmpty()
         val model = actAiModel.text?.toString()?.trim().orEmpty()
@@ -177,7 +170,7 @@ class AiComponent(
                                 " ${response.take(100)}${if (response.length > 100) "..." else ""}",
                         R.drawable.ic_success
                     )
-                    // 测试成功：保存到本地 Pref
+                    // 娴嬭瘯鎴愬姛锛氫繚瀛樺埌鏈湴 Pref
                     PrefManager.apply {
                         apiProvider = provider
                         apiKey = token
@@ -203,13 +196,9 @@ class AiComponent(
     }
 
     /**
-     * 用户点击"刷新模型"时调用 - Linus式错误处理
-     *
-     * 设计原则：
-     * 1. 参数验证在最前面 - 快速失败
-     * 2. 统一的错误处理 - 不让异常泄露到UI层
-     * 3. 正确的资源管理 - LoadingUtils使用context而不是activity
-     * 4. 清晰的状态反馈 - 成功/失败都有明确提示
+     * 鐢ㄦ埛鐐瑰嚮"鍒锋柊妯″瀷"鏃惰皟鐢?- Linus寮忛敊璇鐞?     *
+     * 璁捐鍘熷垯锛?     * 1. 鍙傛暟楠岃瘉鍦ㄦ渶鍓嶉潰 - 蹇€熷け璐?     * 2. 缁熶竴鐨勯敊璇鐞?- 涓嶈寮傚父娉勯湶鍒癠I灞?     * 3. 姝ｇ‘鐨勮祫婧愮鐞?- LoadingUtils浣跨敤context鑰屼笉鏄痑ctivity
+     * 4. 娓呮櫚鐨勭姸鎬佸弽棣?- 鎴愬姛/澶辫触閮芥湁鏄庣‘鎻愮ず
      */
     private fun fetchModels() = with(binding) {
         val token = etAiToken.text?.toString()?.trim().orEmpty()
@@ -226,27 +215,29 @@ class AiComponent(
                 val url = etAiBaseUrl.text?.toString()?.trim().orEmpty()
                 models = AiAPI.getModels(provider = provider, apiKey = token, apiUri = url)
 
-                // 成功时更新UI
+                // 鎴愬姛鏃舵洿鏂癠I
                 actAiModel.setSimpleItems(models.toTypedArray())
                 tilAiToken.error = null
 
+            } catch (e: Exception) {
+                tilAiToken.error = context.getString(R.string.ai_test_failed_message, e.message ?: "Unknown error")
             } finally {
                 loading.close()
             }
         }
     }
 
-    // ------------------------------------ 生命周期 ---------------------------------------- //
+    // ------------------------------------ 鐢熷懡鍛ㄦ湡 ---------------------------------------- //
 
-    /** 恢复页面时同步后端状态到 UI - Linus式异常安全 */
+    /** 鎭㈠椤甸潰鏃跺悓姝ュ悗绔姸鎬佸埌 UI - Linus寮忓紓甯稿畨鍏?*/
     override fun onComponentResume() {
         super.onComponentResume()
         launch {
-            // 1) 载入 Provider 列表
+            // 1) 杞藉叆 Provider 鍒楄〃
             providerList = AiAPI.getProviders()
             binding.actAiProvider.setSimpleItems(providerList.toTypedArray())
             loadProvider(PrefManager.apiProvider)
-            // 2) 使用 PrefManager 将配置填充到页面
+            // 2) 浣跨敤 PrefManager 灏嗛厤缃～鍏呭埌椤甸潰
             binding.actAiProvider.setText(PrefManager.apiProvider, false)
             binding.etAiToken.setText(PrefManager.apiKey)
             binding.etAiBaseUrl.setText(PrefManager.apiUri)
@@ -255,4 +246,3 @@ class AiComponent(
     }
 
 }
-
